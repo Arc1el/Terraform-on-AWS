@@ -1,5 +1,5 @@
 resource "aws_instance" "myec2vm" {
-# 최신 AMI 이미지 가져오기
+  # 최신 AMI 이미지 가져오기
   ami = data.aws_ami.amzlinux2.id
   instance_type = var.instance_type
   user_data = file("${path.module}/app1-install.sh")
