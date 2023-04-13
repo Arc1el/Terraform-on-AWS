@@ -7,6 +7,7 @@ variable "aws_region" {
 }
 
 variable "azs" {
+  type = list(string)
   default = ["ap-northeast-2a", "ap-northeast-2b", "ap-northeast-2c", "ap-northeast-2d"]
 }
 
@@ -20,12 +21,14 @@ variable "instance_type" {
 }
 
 # AWS EC2 인스턴스 타입 정의 (리스트)
-variable "instance_type_list" {
+variable "instance_types" {
   description = "EC2 Instance Type"
   # 타입을 리스트로 지정합니다
   type = list(string)
   # 인스턴스 타입을 정의합니다
-  default = ["t3.micro", "t3.small"]
+  # default = ["t3.micro", "t3.small"]
+  default = ["t3.micro"]
+
 }
 
 # AWS EC2 인스턴스 타입 정의 ()

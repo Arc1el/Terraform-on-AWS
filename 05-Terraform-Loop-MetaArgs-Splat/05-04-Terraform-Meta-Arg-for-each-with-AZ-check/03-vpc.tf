@@ -10,9 +10,10 @@ resource "aws_vpc" "default" {
 }
 
 resource "aws_subnet" "example" {
+  count             = length(var.azs)
   vpc_id            = aws_vpc.default.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2a"
+  cidr_block        = "10.0.${count.index + 1}.0/24"
+  availability_zone = element(var.azs, count.index)
   # 해당 서브넷의 인스턴스에 퍼블릭 ip 부여
   map_public_ip_on_launch = true
 
@@ -38,7 +39,8 @@ resource "aws_route" "public_rtb" {
 }
 
 resource "aws_route_table_association" "public_rtb" {
-  subnet_id      = aws_subnet.example.id
+  count          = length(var.azs)
+  subnet_id      = aws_subnet.example[count.index].id
   route_table_id = aws_route_table.public_rtb.id
 }
 
