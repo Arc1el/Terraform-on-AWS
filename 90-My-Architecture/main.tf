@@ -3,7 +3,7 @@ locals {
     region                          = "ap-northeast-2"
     vpcname                         = var.vpcname
     vpc_cider                       = var.vpc_cider
-    source                          = "terraform-aws-modules/vpc/aws"
+    source                          = "git://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/"
     azs                             = slice(data.aws_availability_zones.available.names, 0, max(length(var.pub_subnets), length(var.pri_subnets), length(var.database_subnets)))
 }
 
