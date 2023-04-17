@@ -16,7 +16,7 @@ locals {
     pri_subnet_names = ["pri-subnet-0", "pri-subnet-1", "pri-subnet-2"]
     db_subnet_names  = ["db-subnet-0", "db-subnet-1", "db-subnet-2", ]
 
-    # 고정아이피 쓸 갯수 (최대 : 3)
+    # 고정아이피 쓸 갯수 (최대 : 3, 증설가능)
     num_eips    = 3
 
     # NatGateway (시나리오)
@@ -43,45 +43,93 @@ locals {
     # Redshift 클러스터 Public Access
     public_redshift = "false"
 
+    #############################################################################
+    ##                              EC2 설정                                   ##
+    #############################################################################
+    #생성할 EC2 instance이름, 타입, 키페어이름, 서브넷 아이디
+    ec2_names = [["test_ec2", "t3.micro", "mykey", "mysg-1"]]
+
+
+    #############################################################################
+    ##                  Security Groups 설정                                   ##
+    #############################################################################
+    security_groups = {
+        web-server = {
+            name                  = "test-hmkim-terraform-web-server"
+            description           = "Security group for web servers"
+            ingress_with_cidr_blocks = [
+                {
+                from_port   = 8080
+                to_port     = 8090
+                protocol    = "tcp"
+                description = "User-service ports"
+                cidr_blocks = "10.10.0.0/16"
+                },
+                {
+                rule        = "postgresql-tcp"
+                cidr_blocks = "0.0.0.0/0"
+                }
+            ]
+        },
+        db-server = {
+            name                  = "test-hmkim-terraform-db-server"
+            description           = "Security group for database servers"
+            ingress_with_cidr_blocks = [
+                {
+                from_port   = 5432
+                to_port     = 5432
+                protocol    = "tcp"
+                description = "PostgreSQL"
+                cidr_blocks = "10.10.0.0/16"
+                }
+            ]
+        }
+        my-test-rule = {
+            name                  = "my-test-rule-name"
+            description           = "test-rule-description"
+            ingress_with_cidr_blocks = [
+                {
+                from_port   = 3000
+                to_port     = 3000
+                protocol    = "tcp"
+                description = "express"
+                cidr_blocks = "10.20.0.0/16"
+                },
+                {
+                from_port   = 3001
+                to_port     = 3001
+                protocol    = "tcp"
+                description = "express"
+                cidr_blocks = "10.20.0.0/16"
+                },
+                {
+                from_port   = 3002
+                to_port     = 3002
+                protocol    = "tcp"
+                description = "express"
+                cidr_blocks = "10.20.0.0/16"
+                }
+            ]
+        }
+    }
 }
+ ###########
+ # vpc 설정
+ ###########
 
 
+module "security_group" {
+    source = "terraform-aws-modules/security-group/aws"
 
+    for_each = local.security_groups
 
+    name        = each.key
+    description = each.value.description
 
+    vpc_id = module.vpc.vpc_id
+    ingress_with_cidr_blocks = each.value.ingress_with_cidr_blocks
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-data "aws_availability_zones" "available" {}
+}
 
 provider "aws" {
     region  = local.region 
@@ -125,3 +173,24 @@ module "vpc" {
       "Environment" = "dev"
     }
 }
+
+# module "ec2_instance" {
+#   source  = "terraform-aws-modules/ec2-instance/aws"
+#   version = "~> 3.0"
+
+#   for_each = toset(["one", "two", "three"])
+
+#   name = "instance-${each.key}"
+
+#   ami                    = data.aws_ami.amzlinux2.id
+#   instance_type          = "t2.micro"
+#   key_name               = "user1"
+#   monitoring             = true
+#   vpc_security_group_ids = ["sg-12345678"]
+#   subnet_id              = "subnet-eddcdzz4"
+
+#   tags = {
+#     Terraform   = "true"
+#     Environment = "dev"
+#   }
+# }
