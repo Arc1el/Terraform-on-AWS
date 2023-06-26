@@ -68,3 +68,4 @@ override.tf.json
 terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/terraform
+05-Terraform-Loop-MetaArgs-Splat/.DS_Store
