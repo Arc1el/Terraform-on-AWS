@@ -1,108 +1,270 @@
-# 로컬변수 설정
 locals {
-  env                 = "dev"
-  vpc_name            = "01.vpc-hmkim-dev"
-  public_vpc_name     = ["subnet-hmkim-dev-pub-a-01", "subnet-hmkim-dev-pub-c-01"]
-  public_vpc_az       = ["ap-northeast-2a", "ap-northeast-2c"]
-  private_vpc_name    = ["subnet-hmkim-dev-pri-a-01", "subnet-hmkim-dev-pri-a-02", "subnet-hmkim-dev-pri-c-01", "subnet-hmkim-dev-pri-c-02"]
-  private_vpc_az      = ["ap-northeast-2a", "ap-northeast-2a", "ap-northeast-2c", "ap-northeast-2c"]
-}
-# VPC 설정
-resource "aws_vpc" "vpc" {
-  cidr_block            = "10.0.0.0/16"
-  instance_tenancy      = "default"
-  enable_dns_support    = true
-  enable_dns_hostnames  = true
+  region = "ap-northeast-2"
+  role_arn = "arn:aws:iam::759320821027:role/ducku-haha"
+  name   = "peteasy" # project name
+  key_name = "peteasy-key"
+  env_name = "prod"
+
+  # user_data = <<-EOT
+  # #!/bin/bash
+  # echo "Hello Terraform!"
+  # EOT
+
   tags = {
-    Name = local.vpc_name
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
+    Owner       = "user"
+    Environment = "prod"
   }
 }
-# 퍼블릭 서브넷
-resource "aws_subnet" "public_subnet" {
-  count             = length(local.public_vpc_name)
-  vpc_id            = aws_vpc.vpc.id
-  cidr_block        = "10.0.${count.index}.0/24"
-  availability_zone = local.public_vpc_az[count.index]
+/* 
+resource "random_pet" "this" {
+  length = 2
+}
+ */
+
+
+################################################################################
+# VPC 생성
+################################################################################
+## [시퀀스]-[프로젝트명]-[리소스종류]-[구분명]-[AZ]-[번호]
+module "vpc" {
+  source = "./modules/vpc"
+  vpc    = [{ 
+    name = "01.vpc-${local.name}-prod" 
+    cidr = "10.0.0.0/16" 
+
+  }]
+
+
+  subnet = [
+    {name="01.sub-${local.name}-prod-pub-a-01", cidr = "10.0.1.0/24",default_gateway = "igw" },
+    {name="02.sub-${local.name}-prod-pub-c-01", cidr = "10.0.2.0/24",default_gateway = "igw" },
+    {name="03.sub-${local.name}-prod-pri-a-01", cidr = "10.0.11.0/24",default_gateway = "nat" },
+    {name="04.sub-${local.name}-prod-pri-c-01", cidr = "10.0.22.0/24", default_gateway = "nat" },
+    {name="05.sub-${local.name}-prod-db-a-01", cidr = "10.0.31.0/24", default_gateway = "non" },
+    {name="06.sub-${local.name}-prod-db-c-01", cidr = "10.0.32.0/24", default_gateway = "non" },
+  ]
+  igw = true 
+  nat = ["01.sub-${local.name}-prod-pub-a-01", "02.sub-${local.name}-prod-pub-c-01"]
+
+  tags = { 
+    Env  = local.env_name
+  }
+}
+
+
+
+
+
+
+
+
+
+################################################################################
+# Route 53 생성
+################################################################################
+/* resource "aws_route53_zone" "main" {
+  count = local.create_route53_zone ? 1 : 0
+
+  name = local.domain_name
+  comment = "route53-${local.name}"
   tags = {
-    Name = local.public_vpc_name[count.index]
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
+    Name = "route53-${local.name}"
   }
 }
-resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.my_igw.id
+
+resource "aws_route53_record" "cloudfront_1" {
+    zone_id = local.route53_zone_id
+    name = local.cdn_domain_name
+    type = "A"
+    alias {
+        name = aws_cloudfront_distribution.s3_distribution_1.domain_name
+        zone_id = aws_cloudfront_distribution.s3_distribution_1.hosted_zone_id
+        evaluate_target_health = false
+    }
+} */
+# resource "aws_route53_record" "devs3-a" {
+#     zone_id = local.route53_zone_id
+#     name = "devs3.${var.domain_name}"
+#     type = "A"
+#     alias {
+#         name = aws_cloudfront_distribution.devs3_s3_distribution.domain_name
+#         zone_id = aws_cloudfront_distribution.devs3_s3_distribution.hosted_zone_id
+#         evaluate_target_health = false
+#     }
+# }
+/* data "aws_lb" "alb" {
+    name = "014f04b3-jenkins-ingress-8202"
+}
+resource "aws_route53_record" "www-a" {
+    zone_id = local.route53_zone_id
+    name = "www.${var.domain_name}"
+    type = "A"
+    alias {
+        name = data.aws_lb.alb.dns_name
+        zone_id = data.aws_lb.alb.zone_id
+        evaluate_target_health = false
+    }
+} */
+
+
+################################################################################
+# ACM 생성
+/* ################################################################################
+resource "aws_acm_certificate" "ssl_certificate" {
+    #provider = aws.acm_provider
+    domain_name = local.domain_name
+    subject_alternative_names = ["*.${local.domain_name}"]
+    validation_method = "DNS"
+    tags = {
+      Name = "acm-${local.name}"
+      Env  = local.env_name
+    }
+    lifecycle {
+      create_before_destroy = true
+    }
+}
+resource "aws_route53_record" "main" {
+    for_each = {
+        for dvo in aws_acm_certificate.ssl_certificate.domain_validation_options : dvo.domain_name => {
+            name = dvo.resource_record_name
+            record = dvo.resource_record_value
+            type = dvo.resource_record_type
+        }
+    }
+    allow_overwrite = true
+    zone_id = local.route53_zone_id
+    name = each.value.name
+    records = [each.value.record]
+    type = each.value.type
+    ttl = 60
+}
+resource "aws_acm_certificate_validation" "cert_validation" {
+    #provider = aws.acm_provider
+    certificate_arn = aws_acm_certificate.ssl_certificate.arn
+    validation_record_fqdns = [for record in aws_route53_record.main : record.fqdn]
+} */
+
+
+################################################################################
+# ACM 생성 for CloudFront
+################################################################################
+/* resource "aws_acm_certificate" "ssl_certificate_virginia" {
+    provider = aws.virginia
+    domain_name = local.domain_name
+    subject_alternative_names = ["*.${local.domain_name}"]
+    validation_method = "DNS"
+    tags = {
+      Name = "acm-${local.name}"
+      Env  = local.env_name
+    }
+    lifecycle {
+      create_before_destroy = true
+    }
+}
+resource "aws_route53_record" "main_virginia" {
+    for_each = {
+        for dvo in aws_acm_certificate.ssl_certificate.domain_validation_options : dvo.domain_name => {
+            name = dvo.resource_record_name
+            record = dvo.resource_record_value
+            type = dvo.resource_record_type
+        }
+    }
+    allow_overwrite = true
+    zone_id = local.route53_zone_id
+    name = each.value.name
+    records = [each.value.record]
+    type = each.value.type
+    ttl = 60
+}
+resource "aws_acm_certificate_validation" "cert_validation_virginia" {
+    provider = aws.virginia
+    certificate_arn = aws_acm_certificate.ssl_certificate_virginia.arn
+    validation_record_fqdns = [for record in aws_route53_record.main : record.fqdn]
+} */
+
+
+
+# ################################################################################
+# # CloudFront
+# ################################################################################
+
+/* resource "aws_cloudfront_distribution" "s3_distribution_1" {
+  origin {
+    domain_name               = aws_s3_bucket.bucket_1.bucket_regional_domain_name                                               # Origin Domain Name
+    origin_id                 = local.bucket_name                                                                                  # CloudFront Name             
+    s3_origin_config {
+      origin_access_identity  = "origin-access-identity/cloudfront/${aws_cloudfront_origin_access_identity.oai_1.id}"            # OAI 설정     
+    }
   }
-  tags = {
-    Name = "public-route-table"
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
+  
+  aliases = ["${local.cdn_domain_name}"]                     # 대체 도메인 설정
+  http_version                = "http2"                            # HTTP 버전 기본값(http1.1, http2)
+  enabled                     = true                               # Enduser가 해당 Distributiond을 사용할 수 있는지 여부
+  is_ipv6_enabled             = true                               # IPv6 지원 설정
+  
+  # logging_config {
+  #   include_cookies           = false                              # CloudFront Access Log에 쿠키 정보 포함 여부 설정
+  #   bucket                    = aws_s3_bucket.                     # Log를 저장할 Bucket 설정
+  #   prefix                    = "CF-${local.bucket_name}-Log/"       # 로그 파일의 접두사 설정
+  # }
+
+
+  default_cache_behavior {                                           # 기본 캐시 동작 설정
+    compress                   = true                                # 특정 파일에 대한 자동 압축 설정            
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = local.bucket_name
+
+    forwarded_values {
+      query_string             = false
+      headers                  = []
+
+      cookies {
+        forward                = "none"
+      }
+    }
+  
+  
+  viewer_protocol_policy = "allow-all"
+    min_ttl                    = 0
+    default_ttl                = 3600
+    max_ttl                    = 86400
   }
-}
-resource "aws_route_table_association" "public_subnet_association" {
-  count          = length(local.public_vpc_name)
-  subnet_id      = aws_subnet.public_subnet[count.index].id
-  route_table_id = aws_route_table.public_route_table.id
-}
-# 프라이빗 서브넷
-resource "aws_subnet" "private_subnet" {
-  count             = length(local.private_vpc_name)
-  vpc_id            = aws_vpc.vpc.id
-  cidr_block        = "10.0.10${count.index}.0/24"
-  availability_zone = local.private_vpc_az[count.index]
-  tags = {
-    Name =  local.private_vpc_name[0]
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
+  
+  restrictions {
+    geo_restriction {
+      restriction_type         = "none"
+      locations                = []
+    }
   }
-}
-resource "aws_route_table" "private_route_table" {
-  vpc_id = aws_vpc.vpc.id
-  tags = {
-    Name = "private-route-table"
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
+
+  viewer_certificate {
+    #cloudfront_default_certificate = true
+    acm_certificate_arn = aws_acm_certificate.ssl_certificate_virginia.arn
+    ssl_support_method  = "sni-only"
   }
-}
-resource "aws_route_table_association" "private_subnet_association" {
-  count          = length(local.public_vpc_name)
-  subnet_id      = aws_subnet.private_subnet[count.index].id
-  route_table_id = aws_route_table.private_route_table.id
-}
-resource "aws_route" "private_route" {
-  route_table_id         = aws_route_table.private_route_table.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat_gateway.id
-}
-# 인터넷 게이트웨이
-resource "aws_internet_gateway" "my_igw" {
-  vpc_id = aws_vpc.vpc.id
-  tags = {
-    Name = "my-igw"
-    Env = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
-  }
-}
-# NAT Gateway
-resource "aws_nat_gateway" "nat_gateway" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public_subnet[0].id
-  tags = {
-    Name        = "nat-gateway"
-    Env         = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
-  }
-}
-# EIP (Elastic IP)
-resource "aws_eip" "nat_eip" {
-  vpc        = true
-  tags = {
-    Name        = "nat-eip"
-    Env         = local.env
-    CreatedDate = formatdate("YYYY-MM-DD HH:mm:ss", timestamp())
-  }
-}
+
+} */
+
+
+
+# resource "aws_s3_bucket_policy" "s3_policy_1" {       # 퍼블릭 버킷
+#   bucket = aws_s3_bucket.bucket_1.id
+
+#   policy = jsonencode({
+  
+#     Version = "2012-10-17"
+#     Statement = [    
+#       {
+#         Sid       = "IPAllow"
+#         Effect    = "Allow"
+#         Principal = "*"
+#         Action    = "s3:*"
+#         Resource = [
+#           aws_s3_bucket.bucket_1.arn,
+#           "${aws_s3_bucket.bucket_1.arn}/*",
+#         ]
+#       },
+#     ]
+#   })
+# }

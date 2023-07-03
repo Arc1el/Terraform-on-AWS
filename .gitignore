@@ -71,3 +71,5 @@ terraform.rc
 05-Terraform-Loop-MetaArgs-Splat/.DS_Store
 
 .terraform.lock.hcl
+modules
+*.pem
