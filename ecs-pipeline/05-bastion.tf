@@ -1,8 +1,3 @@
-locals {
-  bastion_instance_ami = "ami-0c9c942bd7bf113a2" # Ubuntu, 22.04 LTS, amd64
-  bastion_instance_type = "t3.micro"
-  bastion_instance_subnet = module.vpc.subnet_id["01.sub-${local.name}-prod-pub-a-01"]
-}
 module "ec2_instance"{
   source                                = "terraform-aws-modules/ec2-instance/aws"
   instance_initiated_shutdown_behavior  = "stop"
@@ -26,6 +21,6 @@ module "ec2_instance"{
   
 }
 resource "aws_eip" "eip_bastion" {
-  vpc      = true
+  domain = "vpc"
   instance = module.ec2_instance.id
 }

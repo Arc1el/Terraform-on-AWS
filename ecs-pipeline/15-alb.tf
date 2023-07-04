@@ -1,13 +1,10 @@
-locals {
-  alb_subent = [module.vpc.subnet_id["03.sub-${local.name}-prod-pri-a-01"], module.vpc.subnet_id["04.sub-${local.name}-prod-pri-c-01"]]
-}
 ###################################################################
 # Create a new application load balancer
 ###################################################################
 resource "aws_alb" "alb" {
   name            = "alb-${local.name}-prod"
   security_groups = [aws_security_group.sg_alb.id]
-  subnets         = "${local.alb_subent}"
+  subnets         = "${local.alb_subnet}"
   tags = {
     Name = "alb-${local.name}-prod"
   }

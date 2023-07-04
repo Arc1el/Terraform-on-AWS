@@ -1,14 +1,3 @@
-locals {
-
-  ##################
-  # CloudFront
-  ##################
-  bucket_name = "bhoh-peteasy-s3" 
-  cdn_domain_name = "cdn.hyeon.cloud" 
-}
-################################################################################
-# ACM 생성 for CloudFront
-################################################################################
 resource "aws_acm_certificate" "ssl_certificate_virginia" {
     provider = aws.virginia
     domain_name = local.domain_name

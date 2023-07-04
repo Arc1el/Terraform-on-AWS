@@ -1,5 +1,3 @@
-
-
 resource "aws_security_group_rule" "sg_rule_pri1" {
   type              = "ingress"
   from_port         = 0

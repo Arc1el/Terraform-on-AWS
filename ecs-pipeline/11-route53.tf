@@ -1,16 +1,3 @@
-locals {
-  /* 기존에 route53_zone 이 생성되어 있는 경우 */
-  create_route53_zone = false
-  route53_zone_id = "Z07944031UQG8BIM8ILPY"
-
-  /* 신규로 route53_zone 을 생성 시 */
-  //create_route53_zone = true
-  //route53_zone_id = element(aws_route53_zone.main.*.zone_id, 0) 
-
-  domain_name = "hyeon.cloud"
-
-}
-
 ################################################################################
 # Route 53 생성
 ################################################################################

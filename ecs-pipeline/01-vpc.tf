@@ -1,11 +1,3 @@
-locals {
-  region = "ap-northeast-2"
-  role_arn = "arn:aws:iam::759320821027:role/ducku-haha"
-  name   = "peteasy" # project name
-  key_name = "peteasy-key"
-  env_name = "prod"
-}
-
 module "vpc" {
   source = "./modules/vpc"
   vpc    = [{ 
