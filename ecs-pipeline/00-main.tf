@@ -48,4 +48,21 @@ locals {
                 module.vpc.subnet_id["04.sub-${local.name}-prod-pri-c-01"]]
 
   codepipeline_bucket_name = "hmkim-codepipeline-bucket"
+  pipline_name = "hmkim-pipline"
+  branch_name = "master"
+  container_name = "nodehelloworld"
+
+  ecr_uri_repo = "759320821027.dkr.ecr.ap-northeast-2.amazonaws.com/hmkim-hellonode"
+
+  build_project_name = "hmkim-hellonode-buildproject"
+
+  codecommit_repo_name = "hmkim-ecscicd"
+
+  source_version = "master"
+  buildspec_location = "Basic-Helloworld/buildspec.yml"
+  imagedefinition_path = "Basic-Helloworld/imagedefinitions.json"
+  esc_cluster_name = "hmkim-helloworld_cluster"
+  ecs_service_name = "hmkim-helloworld_service"
+
+  codepipeline_artifact_bucket = "hmkim-codepipeline-artifact"
 }
